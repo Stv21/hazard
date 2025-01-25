@@ -1,39 +1,17 @@
 <!-- advisor/templates/advisor/resources.html -->
+{% extends 'advisor/base.html' %}
 {% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Educational Resources</title>
-    <link rel="stylesheet" href="{% static 'css/style.css' %}">
-</head>
-<body>
-    <header>
-        <nav>
-            <ul>
-                <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
-                <li><a href="{% url 'educational_resources' %}">Resources</a></li>
-                <li><a href="{% url 'login' %}">Login</a></li>
-                <li><a href="{% url 'register' %}">Register</a></li>
-                <li><a href="{% url 'logout' %}">Logout</a></li>
-            </ul>
-        </nav>
-    </header>
-    <main>
-        <h1>Educational Resources</h1>
-        <ul>
-            {% for resource in resources %}
-                <li>
-                    <h2>{{ resource.title }}</h2>
-                    <p>{{ resource.content }}</p>
-                </li>
-            {% endfor %}
-        </ul>
-    </main>
-    <footer>
-        <p>&copy; 2025 Financial Advisor. All rights reserved.</p>
-    </footer>
-    <script src="{% static 'js/script.js' %}"></script>
-</body>
-</html>
+
+{% block title %}Educational Resources{% endblock %}
+
+{% block content %}
+    <h1>Educational Resources</h1>
+    <ul>
+        {% for resource in resources %}
+            <li>
+                <h2>{{ resource.title }}</h2>
+                <p>{{ resource.content }}</p>
+            </li>
+        {% endfor %}
+    </ul>
+{% endblock %}

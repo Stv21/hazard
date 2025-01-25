@@ -1,0 +1,27 @@
+<!-- advisor/templates/advisor/ai_in_finance.html -->
+{% extends 'advisor/base.html' %}
+{% load static %}
+
+{% block title %}AI in Finance{% endblock %}
+
+{% block content %}
+    <h1>AI in Finance</h1>
+    <form method="post" action="{% url 'ai_in_finance' %}">
+        {% csrf_token %}
+        <label for="goal">Financial Goal:</label>
+        <input type="text" id="goal" name="goal" required>
+        <label for="investment">Investment Amount (₹):</label>
+        <input type="number" id="investment" name="investment" required>
+        <label for="risk_level">Risk Level:</label>
+        <select id="risk_level" name="risk_level">
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+        </select>
+        <button type="submit">Submit</button>
+    </form>
+    {% if ai_suggestion %}
+        <p>{{ ai_suggestion }}</p>
+        <img src="{{ ai_graph }}" alt="Graph">
+    {% endif %}
+{% endblock %}

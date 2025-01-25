@@ -10,5 +10,6 @@ urlpatterns = [
     path('register/', views.register_view, name='register'),
     path("datasetanlysis/", views.datasetanlysis, name="datasetanlysis"),
     path('financial_goal/', views.financial_goal_view, name='financial_goal'),
+    path('ai_in_finance/', views.ai_in_finance_view, name='ai_in_finance'),
     
 ]
