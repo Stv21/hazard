@@ -8,4 +8,51 @@
 <p>Financial Goals: {{ profile.financial_goals }}</p>
 <p>Risk Tolerance: {{ profile.risk_tolerance }}</p>
 <p>Current Portfolio: {{ profile.current_portfolio }}</p>
+
+{% if income_data %}
+<!-- Display Income in a Fixed Corner -->
+<div id="incomeDisplay" class="fixed-corner">
+    <p>Income: ₹{{ income_data.income }}</p>
+    <p>Goal: {{ income_data.goal }}</p>
+    <button onclick="openPopup()">Edit</button>
+</div>
+{% endif %}
+
+<!-- Popup Form for Income Status -->
+<div id="incomePopup" class="popup">
+    <div class="popup-content">
+        <span class="close" onclick="closePopup()">&times;</span>
+        <h2>Enter Your Income Status</h2>
+        <form method="post" action="{% url 'income_status' %}">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit">Submit</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openPopup() {
+        document.getElementById("incomePopup").style.display = "block";
+    }
+
+    function closePopup() {
+        document.getElementById("incomePopup").style.display = "none";
+    }
+
+    function updateIncomeValue(value) {
+        document.getElementById("id_income_text").value = value;
+    }
+
+    function updateIncomeSlider(value) {
+        document.getElementById("id_income").value = value;
+    }
+
+    // Open the popup only if income data is not provided
+    window.onload = function() {
+        {% if not income_data %}
+        openPopup();
+        {% endif %}
+    }
+</script>
 {% endblock %}
