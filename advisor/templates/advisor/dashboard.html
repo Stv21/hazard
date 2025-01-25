@@ -1,0 +1,11 @@
+<!-- advisor/templates/advisor/dashboard.html -->
+{% extends 'advisor/base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<h1>Welcome, {{ profile.user.username }}</h1>
+<p>Financial Goals: {{ profile.financial_goals }}</p>
+<p>Risk Tolerance: {{ profile.risk_tolerance }}</p>
+<p>Current Portfolio: {{ profile.current_portfolio }}</p>
+{% endblock %}
