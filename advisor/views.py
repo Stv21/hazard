@@ -3,7 +3,6 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate, logout
 from .forms import RegisterForm, UserProfileForm, FinancialGoalForm
 from .models import UserProfile
-from alpha_vantage.timeseries import TimeSeries
 import pandas as pd
 import matplotlib.pyplot as plt
 import io
@@ -11,8 +10,10 @@ import base64
 import urllib
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_absolute_error
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense, Dropout
+from alpha_vantage.timeseries import TimeSeries
 
 API_KEY = 'NBWOL7M2GDDH723E'
 
@@ -20,9 +21,34 @@ def fetch_stock_data(ticker):
     ts = TimeSeries(key=API_KEY, output_format='pandas')
     data, meta_data = ts.get_daily(symbol=ticker, outputsize='full')
     data = data.sort_index(ascending=True)
-    data['Return'] = data['4. close'].pct_change()
     data = data.dropna()
     return data
+
+def preprocess_data(data):
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    scaled_data = scaler.fit_transform(data['4. close'].values.reshape(-1, 1))
+
+    X, y = [], []
+    for i in range(60, len(scaled_data)):
+        X.append(scaled_data[i-60:i, 0])
+        y.append(scaled_data[i, 0])
+
+    X, y = np.array(X), np.array(y)
+    X = np.reshape(X, (X.shape[0], X.shape[1], 1))
+
+    return X, y, scaler
+
+def build_and_train_lstm(X_train, y_train):
+    model = Sequential()
+    model.add(LSTM(units=50, return_sequences=True, input_shape=(X_train.shape[1], 1)))
+    model.add(Dropout(0.2))
+    model.add(LSTM(units=50, return_sequences=False))
+    model.add(Dropout(0.2))
+    model.add(Dense(units=1))
+
+    model.compile(optimizer='adam', loss='mean_squared_error')
+    model.fit(X_train, y_train, epochs=10, batch_size=32, verbose=1)
+    return model
 
 def predict_best_investment(goal, investment, risk_level):
     tickers = ['MSFT', 'AAPL', 'GOOGL', 'AMZN', 'TSLA']
@@ -34,15 +60,22 @@ def predict_best_investment(goal, investment, risk_level):
     for ticker in tickers:
         try:
             data = fetch_stock_data(ticker)
-            data['Previous Close'] = data['4. close'].shift(1)
-            data.dropna(inplace=True)
-            X = data[['Previous Close']]
-            y = data['4. close']
+            X, y, scaler = preprocess_data(data)
+
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-            model = LinearRegression()
-            model.fit(X_train, y_train)
+
+            model = build_and_train_lstm(X_train, y_train)
+
+            inputs = data['4. close'].values[-60:].reshape(-1, 1)
+            inputs = scaler.transform(inputs)
+
+            X_future = np.array([inputs])
+            X_future = np.reshape(X_future, (X_future.shape[0], X_future.shape[1], 1))
+
+            predicted_price_scaled = model.predict(X_future)
+            predicted_price = scaler.inverse_transform(predicted_price_scaled)[0, 0]
+
             last_close = data['4. close'].iloc[-1]
-            predicted_price = model.predict([[last_close]])[0]
             shares = investment / last_close
             predicted_value = shares * predicted_price
 
@@ -65,25 +98,41 @@ def predict_best_investment(goal, investment, risk_level):
 def ai_in_finance_view(request):
     if request.method == 'POST':
         goal = request.POST.get('goal')
-        investment = float(request.POST.get('investment'))
+        investment = request.POST.get('investment')
         risk_level = request.POST.get('risk_level', 'medium')
+
+        if not investment:
+            return render(request, 'advisor/ai_in_finance.html', {'ai_suggestion': 'Please provide a valid investment amount.'})
+
+        try:
+            investment = float(investment)
+        except ValueError:
+            return render(request, 'advisor/ai_in_finance.html', {'ai_suggestion': 'Please provide a valid investment amount.'})
+
         best_ticker, last_close_price, best_predicted_price, best_predicted_value = predict_best_investment(goal, investment, risk_level)
 
-        suggestion = f"Based on your goal of {goal} and your investment of ₹{investment}, we suggest investing in {best_ticker}. Last closing price: ₹{last_close_price:.2f}. Predicted price for next day: ₹{best_predicted_price:.2f}. Predicted value of your investment: ₹{best_predicted_value:.2f}."
+        if best_ticker and last_close_price and best_predicted_price and best_predicted_value:
+            suggestion = f"Based on your goal of {goal} and your investment of ₹{investment}, we suggest investing in {best_ticker}. Last closing price: ₹{last_close_price:.2f}. Predicted price for next day: ₹{best_predicted_price:.2f}. Predicted value of your investment: ₹{best_predicted_value:.2f}."
+        else:
+            suggestion = "Unable to provide a suggestion at this time. Please try again later."
 
-        data = fetch_stock_data(best_ticker)
-        plt.figure(figsize=(10, 5))
-        plt.plot(data.index, data['4. close'], label='Close Price')
-        plt.xlabel('Date')
-        plt.ylabel('Price (₹)')
-        plt.title(f'{best_ticker} Stock Price')
-        plt.legend()
-        plt.grid(True)
-        buf = io.BytesIO()
-        plt.savefig(buf, format='png')
-        buf.seek(0)
-        string = base64.b64encode(buf.read())
-        uri = 'data:image/png;base64,' + urllib.parse.quote(string)
+        if best_ticker:
+            data = fetch_stock_data(best_ticker)
+            plt.figure(figsize=(10, 5))
+            plt.plot(data.index, data['4. close'], label='Close Price')
+            plt.xlabel('Date')
+            plt.ylabel('Price (₹)')
+            plt.title(f'{best_ticker} Stock Price')
+            plt.legend()
+            plt.grid(True)
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            string = base64.b64encode(buf.read())
+            uri = 'data:image/png;base64,' + urllib.parse.quote(string)
+
+        else:
+            uri = None
 
         return render(request, 'advisor/ai_in_finance.html', {'ai_suggestion': suggestion, 'ai_graph': uri})
     return render(request, 'advisor/ai_in_finance.html')
@@ -122,7 +171,6 @@ def register_view(request):
 def educational_resources(request):
     resources = [
         {'title': 'Investment Basics', 'content': '...'},
-        {'title': 'Understanding Risk', 'content': '...'},
     ]
     return render(request, 'advisor/resources.html', {'resources': resources})
 
@@ -162,7 +210,7 @@ def financial_goal_view(request):
             model = LinearRegression()
             model.fit(X_train, y_train)
             last_close = data['4. close'].iloc[-1]
-            predicted_price = model.predict([[last_close]])[0]
+            predicted_price = model.predict(pd.DataFrame([[last_close]], columns=['Previous Close']))[0]
             shares = investment / last_close
             predicted_value = shares * predicted_price
             
