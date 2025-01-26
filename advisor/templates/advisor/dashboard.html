@@ -12,14 +12,62 @@
             background-attachment: fixed;
             background-position: center;
         }
+        .widget-container {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .results-table {
+            margin-top: 20px;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .results-table th, .results-table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        .results-table th {
+            background-color: #f4f4f4;
+        }
     </style>
 
     <h1>Welcome, {{ profile.user.username }}</h1>
     <p>Current Portfolio: </p>
 
+    <!-- Stock Market Analysis Graph -->
+    <div class="widget-container">
+        <h2>Real-Time Stock Market Graph</h2>
+        <div id="tradingview-widget-container" style="height: 200px; width: 100%;">
+            <div id="tradingview_a1b2c"></div>
+            <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+            <script type="text/javascript">
+                new TradingView.widget({
+                    "container_id": "tradingview_a1b2c",
+                    "autosize": true,
+                    "symbol": "NASDAQ:AAPL", // Change the symbol as needed (e.g., "NYSE:TSLA")
+                    "interval": "D",
+                    "timezone": "Etc/UTC",
+                    "theme": "light",
+                    "style": "1",
+                    "locale": "en",
+                    "toolbar_bg": "#f1f3f6",
+                    "enable_publishing": false,
+                    "allow_symbol_change": true,
+                    "details": true,
+                    "withdateranges": true,
+                    "hide_side_toolbar": false
+                });
+            </script>
+        </div>
+    </div>
+
+    <!-- Captured Results -->
     <h2>Captured Results</h2>
     {% if results %}
-        <table border="1">
+        <table class="results-table">
             <thead>
                 <tr>
                     <th>Logo</th>
