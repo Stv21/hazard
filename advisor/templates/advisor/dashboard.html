@@ -1,5 +1,4 @@
 <!-- advisor/templates/advisor/dashboard.html -->
-<!-- advisor/templates/advisor/dashboard.html -->
 {% extends 'advisor/base.html' %}
 {% load static %}
 
@@ -10,55 +9,53 @@
     <p>Financial Goals: {{ profile.financial_goals }}</p>
     <p>Risk Tolerance: {{ profile.risk_tolerance }}</p>
     <p>Current Portfolio: {{ profile.current_portfolio }}</p>
+
+    <h2>Captured Results</h2>
+    {% if results %}
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Ticker</th>
+                    <th>Last Close Price (₹)</th>
+                    <th>Predicted Price (₹)</th>
+                    <th>Predicted Value (₹)</th>
+                    <th>Goal</th>
+                    <th>Investment (₹)</th>
+                    <th>Risk Level</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in results %}
+                    <tr>
+                        <td>{{ result.ticker }}</td>
+                        <td>₹{{ result.last_close_price }}</td>
+                        <td>₹{{ result.predicted_price }}</td>
+                        <td>₹{{ result.predicted_value }}</td>
+                        <td>{{ result.goal }}</td>
+                        <td>₹{{ result.investment }}</td>
+                        <td>{{ result.risk_level }}</td>
+                        <td>
+                            <form method="post" action="{% url 'dashboard' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="delete_id" value="{{ result.id }}">
+                                <button type="submit" style="color: red;">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No captured results yet.</p>
+    {% endif %}
+
+    <!-- Display success message -->
+    {% if messages %}
+        <ul>
+            {% for message in messages %}
+                <li style="color: green;">{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
 {% endblock %}
-<!--
-    {% if income_data %}
-    <!-- Display Income in a Fixed Corner 
-    <div id="incomeDisplay" class="fixed-corner">
-        <p>Income: ₹{{ income_data.income }}</p>
-        <p>Goal: {{ income_data.goal }}</p>
-        <button onclick="openPopup()">Edit</button>
-    </div>
-    {% endif %} 
-
-
-    
-     <div id="incomePopup" class="popup">
-        <div class="popup-content">
-            <span class="close" onclick="closePopup()">&times;</span>
-            <h2>Enter Your Income Status</h2>
-            <form method="post" action="{% url 'income_status' %}">
-                {% csrf_token %}
-                {{ form.as_p }}
-                <button type="submit">Submit</button>
-            </form>
-        </div>
-    </div> -->
-
-    <!--
-    <script>
-        function openPopup() {
-            document.getElementById("incomePopup").style.display = "block";
-        }
-
-        function closePopup() {
-            document.getElementById("incomePopup").style.display = "none";
-        }
-
-        function updateIncomeValue(value) {
-            document.getElementById("id_income_text").value = value;
-        }
-
-        function updateIncomeSlider(value) {
-            document.getElementById("id_income").value = value;
-        }
-
-        // Open the popup only if income data is not provided
-        window.onload = function() {
-            {% if not income_data %}
-            openPopup();
-            {% endif %}
-        }
-    </script>
-    --> 
-

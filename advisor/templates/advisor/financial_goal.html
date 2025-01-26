@@ -6,10 +6,13 @@
 
 {% block content %}
     <h1>Financial Goal</h1>
-    <form method="post">
+    <form method="post" action="{% url 'financial_goal' %}">
         {% csrf_token %}
         {{ form.as_p }}
-        <button type="submit">Submit</button>
+        <button type="submit" name="submit">Submit</button>
+        {% if suggestion %}
+            <button type="submit" name="capture">Capture</button>
+        {% endif %}
     </form>
     {% if suggestion %}
         <p>{{ suggestion }}</p>

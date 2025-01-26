@@ -1,8 +1,8 @@
-# advisor/views.py
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
 from django.contrib.auth import login, authenticate, logout
 from .forms import RegisterForm, UserProfileForm, FinancialGoalForm
-from .models import UserProfile
+from .models import UserProfile, CapturedResult
 import pandas as pd
 import matplotlib.pyplot as plt
 import io
@@ -11,9 +11,11 @@ import urllib
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras.models import Sequential
+from sklearn.linear_model import LinearRegression
+from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from alpha_vantage.timeseries import TimeSeries
+import os
 
 API_KEY = 'NBWOL7M2GDDH723E'
 
@@ -38,16 +40,20 @@ def preprocess_data(data):
 
     return X, y, scaler
 
-def build_and_train_lstm(X_train, y_train):
-    model = Sequential()
-    model.add(LSTM(units=50, return_sequences=True, input_shape=(X_train.shape[1], 1)))
-    model.add(Dropout(0.2))
-    model.add(LSTM(units=50, return_sequences=False))
-    model.add(Dropout(0.2))
-    model.add(Dense(units=1))
+def build_and_train_lstm(X_train, y_train, model_filename):
+    if os.path.exists(model_filename):
+        model = load_model(model_filename)
+    else:
+        model = Sequential()
+        model.add(LSTM(units=50, return_sequences=True, input_shape=(X_train.shape[1], 1)))
+        model.add(Dropout(0.2))
+        model.add(LSTM(units=50, return_sequences=False))
+        model.add(Dropout(0.2))
+        model.add(Dense(units=1))
 
-    model.compile(optimizer='adam', loss='mean_squared_error')
-    model.fit(X_train, y_train, epochs=10, batch_size=32, verbose=1)
+        model.compile(optimizer='adam', loss='mean_squared_error')
+        model.fit(X_train, y_train, epochs=10, batch_size=32, verbose=1)
+        model.save(model_filename)
     return model
 
 def predict_best_investment(goal, investment, risk_level):
@@ -64,7 +70,8 @@ def predict_best_investment(goal, investment, risk_level):
 
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-            model = build_and_train_lstm(X_train, y_train)
+            model_filename = f'models/{ticker}_lstm_model.h5'
+            model = build_and_train_lstm(X_train, y_train, model_filename)
 
             inputs = data['4. close'].values[-60:].reshape(-1, 1)
             inputs = scaler.transform(inputs)
@@ -134,15 +141,120 @@ def ai_in_finance_view(request):
         else:
             uri = None
 
+        if 'capture' in request.POST:
+            CapturedResult.objects.create(
+                user=request.user,
+                ticker=best_ticker,
+                last_close_price=last_close_price,
+                predicted_price=best_predicted_price,
+                predicted_value=best_predicted_value,
+                goal=goal,
+                investment=investment,
+                risk_level=risk_level
+            )
+
         return render(request, 'advisor/ai_in_finance.html', {'ai_suggestion': suggestion, 'ai_graph': uri})
     return render(request, 'advisor/ai_in_finance.html')
 
+def financial_goal_view(request):
+    if request.method == 'POST':
+        form = FinancialGoalForm(request.POST)
+        if form.is_valid():
+            ticker = form.cleaned_data['ticker']
+            investment = form.cleaned_data['investment']
+            goal = form.cleaned_data['goal']
+            
+            data = fetch_stock_data(ticker)
+            data['Previous Close'] = data['4. close'].shift(1)
+            data.dropna(inplace=True)
+            X = data[['Previous Close']]
+            y = data['4. close']
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            model = LinearRegression()
+            model.fit(X_train, y_train)
+            last_close = data['4. close'].iloc[-1]
+            predicted_price = model.predict(pd.DataFrame([[last_close]], columns=['Previous Close']))[0]
+            shares = investment / last_close
+            predicted_value = shares * predicted_price
+            
+            plt.figure(figsize=(10, 5))
+            plt.plot(data.index, data['4. close'], label='Close Price')
+            plt.plot(data.index, data['Previous Close'], label='Previous Close')
+            plt.xlabel('Date')
+            plt.ylabel('Price (₹)')
+            plt.title(f'{ticker} Stock Price')
+            plt.legend()
+            plt.grid(True)
+            buf = io.BytesIO()
+            plt.savefig(buf, format='png')
+            buf.seek(0)
+            string = base64.b64encode(buf.read())
+            uri = 'data:image/png;base64,' + urllib.parse.quote(string)
+            
+            suggestion = f"Based on your goal of {goal} and your investment of ₹{investment}, we suggest investing in {ticker}. Predicted stock price: ₹{predicted_price:.2f}. Predicted value of your investment: ₹{predicted_value:.2f}."
+
+            if 'capture' in request.POST:
+                CapturedResult.objects.create(
+                    user=request.user,
+                    ticker=ticker,
+                    last_close_price=last_close,
+                    predicted_price=predicted_price,
+                    predicted_value=predicted_value,
+                    goal=goal,
+                    investment=investment,
+                    risk_level='N/A'  # Assuming risk level is not applicable here
+                )
+            
+            return render(request, 'advisor/financial_goal.html', {'form': form, 'suggestion': suggestion, 'graph': uri})
+        else:
+            return render(request, 'advisor/financial_goal.html', {'form': form})
+    else:
+        form = FinancialGoalForm()
+    return render(request, 'advisor/financial_goal.html', {'form': form})
+CapturedResult
+
 def dashboard(request):
+    if not request.user.is_authenticated:
+        return redirect('login')
+
     try:
         user_profile = UserProfile.objects.get(user=request.user)
     except UserProfile.DoesNotExist:
         return redirect('create_profile')
-    return render(request, 'advisor/dashboard.html', {'profile': user_profile})
+
+    # Fetch captured results for the logged-in user
+    captured_results = CapturedResult.objects.filter(user=request.user)
+
+    # Handle delete request
+    if request.method == 'POST' and 'delete_id' in request.POST:
+        delete_id = request.POST.get('delete_id')
+        result_to_delete = get_object_or_404(CapturedResult, id=delete_id, user=request.user)
+        result_to_delete.delete()
+        messages.success(request, "Result deleted successfully!")
+        return redirect('dashboard')
+
+    # Prepare data to display
+    results_data = []
+    for result in captured_results:
+        results_data.append({
+            'id': result.id,
+            'ticker': result.ticker,
+            'last_close_price': result.last_close_price,
+            'predicted_price': result.predicted_price,
+            'predicted_value': result.predicted_value,
+            'goal': result.goal,
+            'investment': result.investment,
+            'risk_level': result.risk_level,
+        })
+
+    return render(
+        request,
+        'advisor/dashboard.html',
+        {
+            'profile': user_profile,
+            'results': results_data,
+        }
+    )
 
 def login_view(request):
     if request.method == 'POST':
@@ -229,6 +341,18 @@ def financial_goal_view(request):
             uri = 'data:image/png;base64,' + urllib.parse.quote(string)
             
             suggestion = f"Based on your goal of {goal} and your investment of ₹{investment}, we suggest investing in {ticker}. Predicted stock price: ₹{predicted_price:.2f}. Predicted value of your investment: ₹{predicted_value:.2f}."
+
+            if 'capture' in request.POST:
+                CapturedResult.objects.create(
+                    user=request.user,
+                    ticker=ticker,
+                    last_close_price=last_close,
+                    predicted_price=predicted_price,
+                    predicted_value=predicted_value,
+                    goal=goal,
+                    investment=investment,
+                    risk_level='N/A'  # Assuming risk level is not applicable here
+                )
             
             return render(request, 'advisor/financial_goal.html', {'form': form, 'suggestion': suggestion, 'graph': uri})
     else:
