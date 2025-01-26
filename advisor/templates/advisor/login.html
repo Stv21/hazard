@@ -58,6 +58,16 @@
         .form-container button:hover {
             background-color: #555;
         }
+        .register-link {
+            margin-top: 10px;
+        }
+        .register-link a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .register-link a:hover {
+            text-decoration: underline;
+        }
         .logo {
             width: 100px;
             height: auto;
@@ -86,6 +96,9 @@
             <input type="password" id="password" name="password">
             <button type="submit">Login</button>
         </form>
+        <div class="register-link">
+            <p>Don't have an account? <a href="{% url 'register' %}">Register here</a></p>
+        </div>
     </div>
     <footer>
         <p>&copy; 2025 Financial Advisor. All rights reserved.</p>

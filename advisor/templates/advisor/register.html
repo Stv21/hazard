@@ -7,6 +7,71 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register</title>
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-image: url('{% static 'img/graph.jpg' %}');
+            background-size: cover;
+            background-position: center;
+        }
+        .form-container {
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+        }
+        .form-container h1 {
+            margin-bottom: 20px;
+        }
+        .form-container form {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-container label {
+            margin-bottom: 5px;
+            text-align: left;
+        }
+        .form-container input {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .form-container button {
+            padding: 10px;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .form-container button:hover {
+            background-color: #555;
+        }
+        .logo {
+            width: 100px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+        footer {
+            text-align: center;
+            padding: 10px 0;
+            background-color: #333;
+            color: #fff;
+            position: fixed;
+            width: 100%;
+            bottom: 0;
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -20,12 +85,15 @@
         </nav>
     </header>
     <main>
-        <h1>Register</h1>
-        <form method="post">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit">Register</button>
-        </form>
+        <div class="form-container">
+            <img src="{% static 'img/fin_logo.jpg' %}" alt="Logo" class="logo">
+            <h1>Register</h1>
+            <form method="post">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button type="submit">Register</button>
+            </form>
+        </div>
     </main>
     <footer>
         <p>&copy; 2025 Financial Advisor. All rights reserved.</p>

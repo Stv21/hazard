@@ -1,9 +1,11 @@
 # advisor/urls.py
 from django.urls import path
 from . import views
+from django.views.generic.base import RedirectView
 
 urlpatterns = [
     path('dashboard/', views.dashboard, name='dashboard'),
+    path('', RedirectView.as_view(url='login', permanent=False), name='home'),
     path('login/', views.login_view, name='login'),
     path('resources/', views.educational_resources, name='educational_resources'),
     path('logout/', views.logout_view, name='logout'),  # Add a logout view if needed

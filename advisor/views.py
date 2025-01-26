@@ -3,6 +3,7 @@ from django.contrib import messages
 from django.contrib.auth import login, authenticate, logout
 from .forms import RegisterForm, UserProfileForm, FinancialGoalForm
 from .models import UserProfile, CapturedResult
+import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import io
@@ -14,8 +15,12 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.linear_model import LinearRegression
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import LSTM, Dense, Dropout
+from sklearn.metrics import mean_absolute_error
 from alpha_vantage.timeseries import TimeSeries
 import os
+import io
+import base64
+import urllib
 
 API_KEY = 'NBWOL7M2GDDH723E'
 
@@ -23,6 +28,7 @@ def fetch_stock_data(ticker):
     ts = TimeSeries(key=API_KEY, output_format='pandas')
     data, meta_data = ts.get_daily(symbol=ticker, outputsize='full')
     data = data.sort_index(ascending=True)
+    data['Return'] = data['4. close'].pct_change()
     data = data.dropna()
     return data
 
@@ -43,6 +49,7 @@ def preprocess_data(data):
 def build_and_train_lstm(X_train, y_train, model_filename):
     if os.path.exists(model_filename):
         model = load_model(model_filename)
+        model.compile(optimizer='adam', loss='mean_squared_error')
     else:
         model = Sequential()
         model.add(LSTM(units=50, return_sequences=True, input_shape=(X_train.shape[1], 1)))
@@ -52,7 +59,7 @@ def build_and_train_lstm(X_train, y_train, model_filename):
         model.add(Dense(units=1))
 
         model.compile(optimizer='adam', loss='mean_squared_error')
-        model.fit(X_train, y_train, epochs=10, batch_size=32, verbose=1)
+        model.fit(X_train, y_train, epochs=10, batch_size=32)
         model.save(model_filename)
     return model
 
@@ -62,6 +69,11 @@ def predict_best_investment(goal, investment, risk_level):
     best_predicted_value = -np.inf
     best_predicted_price = None
     last_close_price = None
+
+    def predict_price(model, data, scaler):
+        prediction = model.predict(data)
+        prediction = scaler.inverse_transform(prediction)
+        return prediction[-1, 0]
 
     for ticker in tickers:
         try:
@@ -79,8 +91,7 @@ def predict_best_investment(goal, investment, risk_level):
             X_future = np.array([inputs])
             X_future = np.reshape(X_future, (X_future.shape[0], X_future.shape[1], 1))
 
-            predicted_price_scaled = model.predict(X_future)
-            predicted_price = scaler.inverse_transform(predicted_price_scaled)[0, 0]
+            predicted_price = predict_price(model, X_future, scaler)
 
             last_close = data['4. close'].iloc[-1]
             shares = investment / last_close
