@@ -5,16 +5,24 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
+    <style>
+        body {
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            background-position: center;
+        }
+    </style>
+
     <h1>Welcome, {{ profile.user.username }}</h1>
-    <p>Financial Goals: {{ profile.financial_goals }}</p>
-    <p>Risk Tolerance: {{ profile.risk_tolerance }}</p>
-    <p>Current Portfolio: {{ profile.current_portfolio }}</p>
+    <p>Current Portfolio: </p>
 
     <h2>Captured Results</h2>
     {% if results %}
         <table border="1">
             <thead>
                 <tr>
+                    <th>Logo</th>
                     <th>Ticker</th>
                     <th>Last Close Price (₹)</th>
                     <th>Predicted Price (₹)</th>
@@ -28,6 +36,21 @@
             <tbody>
                 {% for result in results %}
                     <tr>
+                        <td>
+                            {% if result.ticker == "AMZN" %}
+                                <img src="{% static 'logos/amazon.png' %}" alt="Amazon Logo" style="width: 50px; height: 50px;">
+                            {% elif result.ticker == "AAPL" %}
+                                <img src="{% static 'logos/apple.png' %}" alt="Apple Logo" style="width: 50px; height: 50px;">
+                            {% elif result.ticker == "TSLA" %}
+                                <img src="{% static 'logos/tesla.png' %}" alt="Tesla Logo" style="width: 50px; height: 50px;">
+                            {% elif result.ticker == "GOOGL" %}
+                                <img src="{% static 'logos/google.png' %}" alt="Google Logo" style="width: 50px; height: 50px;">
+                            {% elif result.ticker == "MSFT" %}
+                                <img src="{% static 'logos/microsoft.png' %}" alt="Microsoft Logo" style="width: 50px; height: 50px;">
+                            {% else %}
+                                <img src="{% static 'logos/default.png' %}" alt="Default Logo" style="width: 50px; height: 50px;">
+                            {% endif %}
+                        </td>
                         <td>{{ result.ticker }}</td>
                         <td>₹{{ result.last_close_price }}</td>
                         <td>₹{{ result.predicted_price }}</td>

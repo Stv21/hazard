@@ -122,6 +122,7 @@ def ai_in_finance_view(request):
             suggestion = f"Based on your goal of {goal} and your investment of ₹{investment}, we suggest investing in {best_ticker}. Last closing price: ₹{last_close_price:.2f}. Predicted price for next day: ₹{best_predicted_price:.2f}. Predicted value of your investment: ₹{best_predicted_value:.2f}."
         else:
             suggestion = "Unable to provide a suggestion at this time. Please try again later."
+            return render(request, 'advisor/ai_in_finance.html', {'ai_suggestion': suggestion})
 
         if best_ticker:
             data = fetch_stock_data(best_ticker)
@@ -137,11 +138,11 @@ def ai_in_finance_view(request):
             buf.seek(0)
             string = base64.b64encode(buf.read())
             uri = 'data:image/png;base64,' + urllib.parse.quote(string)
-
         else:
             uri = None
 
-        if 'capture' in request.POST:
+        # Only create a CapturedResult if best_ticker is valid
+        if best_ticker and 'capture' in request.POST:
             CapturedResult.objects.create(
                 user=request.user,
                 ticker=best_ticker,
@@ -155,6 +156,7 @@ def ai_in_finance_view(request):
 
         return render(request, 'advisor/ai_in_finance.html', {'ai_suggestion': suggestion, 'ai_graph': uri})
     return render(request, 'advisor/ai_in_finance.html')
+
 
 def financial_goal_view(request):
     if request.method == 'POST':

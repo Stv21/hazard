@@ -10,9 +10,7 @@
         {% csrf_token %}
         {{ form.as_p }}
         <button type="submit" name="submit">Submit</button>
-        {% if suggestion %}
-            <button type="submit" name="capture">Capture</button>
-        {% endif %}
+        <button type="submit" name="capture">Capture</button>
     </form>
     {% if suggestion %}
         <p>{{ suggestion }}</p>

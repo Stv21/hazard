@@ -2,7 +2,6 @@
 {% extends 'advisor/base.html' %}
 {% load static %}
 
-{% block title %}Educational Resources{% endblock %}
 
 {% block content %}
     <h1>Educational Resources</h1>
@@ -10,8 +9,22 @@
         {% for resource in resources %}
             <li>
                 <h2>{{ resource.title }}</h2>
-                <p>{{ resource.content }}</p>
+                <div>
+                    
+                    <table id="DSA">
+                        <tr>
+                            <td><iframe src="https://www.youtube.com/embed/zZ1iKSAAJaM" frameborder="0"></iframe></td>
+                            <td><iframe src="https://www.youtube.com/embed/1nazm4XKZuk" frameborder="0"></iframe></td>
+                            <td><iframe src="https://www.youtube.com/embed/QZYVxrr5Nmo" frameborder="0"></iframe></td>
+                        </tr>
+                        <tr>
+                            <td><iframe src="https://www.youtube.com/embed/gN3IN0sZJYg" frameborder="0"></iframe></td>
+                        </tr>
+                    </table>
+                </div>
             </li>
         {% endfor %}
     </ul>
+
+
 {% endblock %}

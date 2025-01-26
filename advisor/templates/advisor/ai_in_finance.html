@@ -21,13 +21,10 @@
             <option value="high">High</option>
         </select>
         <button type="submit" name="submit">Submit</button>
-        {% if ai_suggestion %}
-            <button type="submit" name="capture">Capture</button>
-        {% endif %}
+        <button type="submit" name="capture">Capture</button>
     </form>
     {% if ai_suggestion %}
         <p>{{ ai_suggestion }}</p>
         <img src="{{ ai_graph }}" alt="Graph">
     {% endif %}
 {% endblock %}
-
